@@ -16,6 +16,64 @@ const PADDLE_W = 20;
 const PADDLE_H = 100;
 const PADDLE_SPEED = 5;
 
+const BALL_RADIUS = 8;
+const BALL_SPEED = 10;
+
+function Ball(x, y, stage) {
+    this.x = x;
+    this.y = y;
+    this.r = BALL_RADIUS;
+
+    this.dx = 0;
+    this.dy = 0;
+
+    this.reposition = () => {
+        this.shape.x = this.x;
+        this.shape.y = this.y;
+    };
+
+    this.draw = stage => {
+        this.shape = new createjs.Shape();
+
+        this.shape.graphics
+            .f("DarkBlue")
+            .dc(0, 0, this.r);
+
+        this.reposition();
+
+        stage.addChild(this.shape);
+    };
+
+    this.tick = () => {
+        this.x = this.x + this.dx;
+        this.y = this.y + this.dy;
+
+        this.reposition();
+    };
+
+    this.direction = (dir) => {
+        const angle = dir * 3.141592 / 180;
+        this.dx = Math.sin(angle) * BALL_SPEED;
+        this.dy = Math.cos(angle) * BALL_SPEED;
+    };
+
+    this.draw(stage);
+
+    this.collides = (paddle) => {
+        if(this.x < 110) {
+            if(this.y > paddle.y - paddle.h / 2 && this.y < paddle.y + paddle.h / 2 && this.x > paddle.x && this.x <= paddle.x + (paddle.w / 2) + BALL_RADIUS) {
+                return true;
+            }
+        } else {
+            if(this.y > paddle.y - paddle.h / 2 && this.y < paddle.y + paddle.h / 2 && this.x < paddle.x && this.x >= paddle.x - (paddle.w / 2) - BALL_RADIUS) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
 function Paddle(x, y, stage) {
     this.x = x;
     this.y = y;
@@ -63,6 +121,7 @@ $(() => {
 
     let left = new Paddle(0, 0, stage);
     let right = new Paddle(0, 0, stage);
+    let ball = new Ball(0, 0, stage);
 
     function resize() {
         canvas.width = window.innerWidth;
@@ -76,26 +135,47 @@ $(() => {
         stage.update();
     }
 
+    function resetGame() {
+        resize();
+
+        left.y = canvas.height / 2;
+        right.y = canvas.height / 2;
+
+        ball.x = canvas.width / 2;
+        ball.y = canvas.height / 2;
+        ball.direction(Math.random() * 360);
+
+        left.reposition();
+        right.reposition();
+        ball.reposition();
+    }
+
     function tick() {
         left.tick();
         right.tick();
+        ball.tick();
+
+        if(ball.y < 0 || ball.y > canvas.height) {
+            ball.dy = ball.dy * -1;
+        }
+
+        if(ball.collides(left) || ball.collides(right)) {
+            ball.dx = ball.dx * -1;
+        }
+
+        if(ball.x < 80 || ball.x > canvas.width - 80) {
+            resetGame();
+        }
 
         render();
     }
-
-    resize();
-
-    left.y = canvas.height / 2;
-    right.y = canvas.height / 2;
-
-    left.reposition(stage);
-    right.reposition(stage);
 
     $(window).resize(() => {
         resize();
 
         left.reposition(stage);
         right.reposition(stage);
+        ball.reposition();
 
         render();
     });
@@ -143,4 +223,5 @@ $(() => {
     });
 
     setInterval(tick, FRAME_TIME);
+    resetGame();
 });
